@@ -145,7 +145,7 @@ def extractive_summarize(text, num_sentences=2):
     
     return summary
 
-def chatbot(scraped_data, summarized_description, summarized_reviews):
+def chatbot(user_input, scraped_data, summarized_description, summarized_reviews):
     st.subheader("Chat with SHopy - Your Shopping Assistant")
 
     chatbot_responses = {
@@ -171,44 +171,40 @@ def chatbot(scraped_data, summarized_description, summarized_reviews):
     # Initialize conversation
     conversation = get_conversation()
 
-    with st.form(key='chat_form'):
-        # User input
-        user_input = st.text_input("You:")
-
-        # Submit button
-        submit_button = st.form_submit_button(label='Send')
-
-        if submit_button:
-            user_input = user_input.lower()
-            conversation.append(f"You: {user_input}")
-            found_match = False
-            for key, synonyms in chatbot_responses.items():
-                for synonym in synonyms:
-                    if synonym in user_input.lower():
-                        if key == 'description':
-                            if 'short' in user_input.lower() or 'brief' in user_input.lower():
-                                description = summarized_description if summarized_description else "No description available."
-                                response = f"Short Description: {description}"
-                            else:
-                                description = scraped_data.get('description', "No description available.")
-                                response = f"Full Description: {description}"
-                        elif key == 'reviews':
-                            if 'summarized' in user_input.lower():
-                                reviews = summarized_reviews if summarized_reviews else "No summarized reviews available."
-                                response = f"Summarized Reviews: {reviews}"
-                            else:
-                                reviews = "\n".join(scraped_data.get('reviews', []))
-                                if reviews:
-                                    response = f"Full Reviews:\n{reviews}"
-                                else:
-                                    response = "No reviews available."
+    user_input = user_input.lower()
+    conversation.append(f"You: {user_input}")
+    found_match = False
+    for key, synonyms in chatbot_responses.items():
+        for synonym in synonyms:
+            if synonym in user_input.lower():
+                if key == 'description':
+                    if 'short' in user_input.lower() or 'brief' in user_input.lower():
+                        description = summarized_description if summarized_description else "No description available."
+                        response = f"Short Description: {description}"
+                    else:
+                        description = scraped_data.get('description', "No description available.")
+                        response = f"Full Description: {description}"
+                elif key == 'reviews':
+                    if 'summarized' in user_input.lower():
+                        reviews = summarized_reviews if summarized_reviews else "No summarized reviews available."
+                        response = f"Summarized Reviews: {reviews}"
+                    else:
+                        reviews = "\n".join(scraped_data.get('reviews', []))
+                        if reviews:
+                            response = f"Full Reviews:\n{reviews}"
                         else:
-                            value = scraped_data.get(key, "Not available.")
-                            response = f"The {key} of the product is: {value}"
-                        found_match = True
-            if not found_match:
-                response = "I'm sorry, I didn't understand your question. Could you please rephrase it?"
-            conversation.append(response)
+                            response = "No reviews available."
+                else:
+                    value = scraped_data.get(key, "Not available.")
+                    response = f"The {key} of the product is: {value}"
+                found_match = True
+    if not found_match:
+        response = "I'm sorry, I didn't understand your question. Could you please rephrase it?"
+    
+    conversation.append(f"Assistant: {response}")
+    
+    # Update the conversation state
+    st.session_state.conversation = conversation
 
   # Display conversation history
     st.text_area("Conversation History", value="\n".join(conversation), key="conversation_history")
