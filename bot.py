@@ -158,23 +158,17 @@ def chatbot(scraped_data, summarized_description, summarized_reviews):
         'all_info': ['display all data', 'display all info', 'display all information', 'give all info', 'show everything', 'show all details']
     }
 
-    # Function to initialize the conversation state
-    def init_conversation():
-        return []
-    # Function to get the current conversation
-    def get_conversation():
-        if "conversation" not in st.session_state:
-            st.session_state.conversation = init_conversation()
-        return st.session_state.conversation
-    # Initialize conversation
-    conversation = get_conversation()
+    # Initialize conversation history
+    if "conversation" not in st.session_state:
+        st.session_state.conversation = []
+
     # User input
     user_input = st.text_input("You:")
-    
+
     # Submit button
     if st.button("Send"):
         user_input = user_input.lower()
-        conversation.append(f"You: {user_input}")
+        st.session_state.conversation.append(f"You: {user_input}")
         found_match = False
         for key, synonyms in chatbot_responses.items():
             for synonym in synonyms:
@@ -202,10 +196,11 @@ def chatbot(scraped_data, summarized_description, summarized_reviews):
                     found_match = True
         if not found_match:
             response = "I'm sorry, I didn't understand your question. Could you please rephrase it?"
-        conversation.append(response)
+        st.session_state.conversation.append(response)
 
     # Display conversation history
-    st.text_area("Conversation History", value="\n".join(conversation), key="conversation_history")
+    for message in st.session_state.conversation:
+        st.text(message)
 
 def main():
     st.title("SHopy - Your Shopping Assistant")
@@ -246,4 +241,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
