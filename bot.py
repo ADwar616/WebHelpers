@@ -218,23 +218,29 @@ def main():
 
     with st.form(key='my_form'):
         webpage_url = st.text_input("Enter the URL of the webpage:")
-        submit_button = st.form_submit_button(label='Scrape Product Data')
+        scrape_data = st.checkbox('Scrape Product Data')
 
-        if submit_button:
-            scraped_data = scrape_single_url(webpage_url)
+        if st.form_submit_button():
+            if scrape_data:
+                scraped_data = scrape_single_url(webpage_url)
 
-            if scraped_data:
-                st.header("Scraped Product Data")
-                st.write(scraped_data)
-                description = scraped_data['description']
-                reviews = "\n".join(scraped_data['reviews'])  # Join multiple reviews into a single string
-                summarized_description = extractive_summarize(description)
-                summarized_reviews = extractive_summarize(reviews, num_sentences=3)  # Adjust the number of sentences as needed
-                st.header("Summarized Description:")
-                st.write(summarized_description)
-                st.header("Summarized Reviews:")
-                st.write(summarized_reviews)
-                chatbot(scraped_data, summarized_description, summarized_reviews)
+                if scraped_data:
+                    st.header("Scraped Product Data")
+                    st.write(scraped_data)
+                    description = scraped_data['description']
+                    reviews = "\n".join(scraped_data['reviews'])  # Join multiple reviews into a single string
+                    summarized_description = extractive_summarize(description)
+                    summarized_reviews = extractive_summarize(reviews, num_sentences=3)  # Adjust the number of sentences as needed
+                    st.header("Summarized Description:")
+                    st.write(summarized_description)
+                    st.header("Summarized Reviews:")
+                    st.write(summarized_reviews)
+                    
+                    user_input = st.text_input("You:")
+                    send_button = st.form_submit_button(label='Send')
+                    
+                    if send_button:
+                        chatbot(user_input, scraped_data, summarized_description, summarized_reviews)
 
 if __name__ == "__main__":
     main()
