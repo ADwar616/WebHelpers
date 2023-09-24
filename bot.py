@@ -168,11 +168,9 @@ def chatbot(scraped_data, summarized_description, summarized_reviews):
         return st.session_state.conversation
     # Initialize conversation
     conversation = get_conversation()
-    # User input
-    user_input = st.text_input("You:")
     
     # Submit button
-    if st.button("Send"):
+    if user_input and not st.session_state.get('button_clicked'):
         user_input = user_input.lower()
         conversation.append(f"You: {user_input}")
         found_match = False
@@ -203,6 +201,7 @@ def chatbot(scraped_data, summarized_description, summarized_reviews):
         if not found_match:
             response = "I'm sorry, I didn't understand your question. Could you please rephrase it?"
         conversation.append(response)
+         st.session_state.button_clicked = True
 
     # Display conversation history
     st.text_area("Conversation History", value="\n".join(conversation), key="conversation_history")
