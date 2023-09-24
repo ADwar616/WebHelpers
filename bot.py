@@ -207,17 +207,23 @@ def chatbot(scraped_data, summarized_description, summarized_reviews):
     # Display conversation history
     st.text_area("Conversation History", value="\n".join(conversation), key="conversation_history")
 
-# Streamlit app
 def main():
     st.title("SHopy - Your Shopping Assistant")
 
     # Input for webpage URL
     webpage_url = st.text_input("Enter the URL of the webpage:")
 
-    if st.button("Scrape Product Data"):
+    # Check if the data has already been scraped
+    if "scraped_data" not in st.session_state:
+        st.session_state.scraped_data = None
+
+    if st.button("Scrape Product Data") or st.session_state.scraped_data is None:
         scraped_data = scrape_single_url(webpage_url)
 
         if scraped_data:
+            # Store the scraped data in the session state
+            st.session_state.scraped_data = scraped_data
+
             # Display the scraped data
             st.header("Scraped Product Data")
             st.write(scraped_data)
@@ -240,3 +246,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
