@@ -201,7 +201,7 @@ def chatbot(scraped_data, summarized_description, summarized_reviews):
         if not found_match:
             response = "I'm sorry, I didn't understand your question. Could you please rephrase it?"
         conversation.append(response)
-         st.session_state.button_clicked = True
+        st.session_state.button_clicked = True
 
     # Display conversation history
     st.text_area("Conversation History", value="\n".join(conversation), key="conversation_history")
@@ -237,5 +237,5 @@ def main():
 
             chatbot(scraped_data, summarized_description, summarized_reviews)
 
-if _name_ == "_main_":
+if __name__ == "__main__":
     main()
