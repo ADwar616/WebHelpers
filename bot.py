@@ -168,6 +168,9 @@ def chatbot(scraped_data, summarized_description, summarized_reviews):
         return st.session_state.conversation
     # Initialize conversation
     conversation = get_conversation()
+
+    # User input
+    user_input = st.text_input("You:")
     
     # Submit button
     if user_input and not st.session_state.get('button_clicked'):
