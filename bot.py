@@ -145,7 +145,7 @@ def extractive_summarize(text, num_sentences=2):
     
     return summary
 
-def chatbot(user_input, scraped_data, summarized_description, summarized_reviews):
+def chatbot(scraped_data, summarized_description, summarized_reviews):
     st.subheader("Chat with SHopy - Your Shopping Assistant")
 
     chatbot_responses = {
@@ -162,40 +162,44 @@ def chatbot(user_input, scraped_data, summarized_description, summarized_reviews
     if "conversation" not in st.session_state:
         st.session_state.conversation = []
 
-    # User input
-    user_input = user_input.lower()
+    with st.form(key='chat_form'):
+        # User input
+        user_input = st.text_input("You:")
 
-    # Submit button
-    if user_input and st.button("Send"):
-        st.session_state.conversation.append(f"You: {user_input}")
-        found_match = False
-        for key, synonyms in chatbot_responses.items():
-            for synonym in synonyms:
-                if synonym in user_input:
-                    if key == 'description':
-                        if 'short' in user_input or 'brief' in user_input:
-                            description = summarized_description if summarized_description else "No description available."
-                            response = f"Short Description: {description}"
-                        else:
-                            description = scraped_data.get('description', "No description available.")
-                            response = f"Full Description: {description}"
-                    elif key == 'reviews':
-                        if 'summarized' in user_input:
-                            reviews = summarized_reviews if summarized_reviews else "No summarized reviews available."
-                            response = f"Summarized Reviews: {reviews}"
-                        else:
-                            reviews = "\n".join(scraped_data.get('reviews', []))
-                            if reviews:
-                                response = f"Full Reviews:\n{reviews}"
+        # Submit button
+        submit_button = st.form_submit_button(label='Send')
+
+        if submit_button:
+            user_input = user_input.lower()
+            st.session_state.conversation.append(f"You: {user_input}")
+            found_match = False
+            for key, synonyms in chatbot_responses.items():
+                for synonym in synonyms:
+                    if synonym in user_input:
+                        if key == 'description':
+                            if 'short' in user_input or 'brief' in user_input:
+                                description = summarized_description if summarized_description else "No description available."
+                                response = f"Short Description: {description}"
                             else:
-                                response = "No reviews available."
-                    else:
-                        value = scraped_data.get(key, "Not available.")
-                        response = f"The {key} of the product is: {value}"
-                    found_match = True
-        if not found_match:
-            response = "I'm sorry, I didn't understand your question. Could you please rephrase it?"
-        st.session_state.conversation.append(response)
+                                description = scraped_data.get('description', "No description available.")
+                                response = f"Full Description: {description}"
+                        elif key == 'reviews':
+                            if 'summarized' in user_input:
+                                reviews = summarized_reviews if summarized_reviews else "No summarized reviews available."
+                                response = f"Summarized Reviews: {reviews}"
+                            else:
+                                reviews = "\n".join(scraped_data.get('reviews', []))
+                                if reviews:
+                                    response = f"Full Reviews:\n{reviews}"
+                                else:
+                                    response = "No reviews available."
+                        else:
+                            value = scraped_data.get(key, "Not available.")
+                            response = f"The {key} of the product is: {value}"
+                        found_match = True
+            if not found_match:
+                response = "I'm sorry, I didn't understand your question. Could you please rephrase it?"
+            st.session_state.conversation.append(response)
 
     # Display conversation history
     st.text_area("Conversation History", value="\n".join(st.session_state.conversation), key="conversation_history")
@@ -203,43 +207,27 @@ def chatbot(user_input, scraped_data, summarized_description, summarized_reviews
 def main():
     st.title("SHopy - Your Shopping Assistant")
 
-    # Input for webpage URL
-    webpage_url = st.text_input("Enter the URL of the webpage:")
+    with st.form(key='my_form'):
+        webpage_url = st.text_input("Enter the URL of the webpage:")
+        scrape_data = st.checkbox('Scrape Product Data')
 
-    # Check if the data has already been scraped
-    if "scraped_data" not in st.session_state:
-        st.session_state.scraped_data = None
+        if st.form_submit_button():
+            if scrape_data:
+                scraped_data = scrape_single_url(webpage_url)
 
-    if st.button("Scrape Product Data") or st.session_state.scraped_data is None:
-        scraped_data = scrape_single_url(webpage_url)
-
-        if scraped_data:
-            # Store the scraped data in the session state
-            st.session_state.scraped_data = scraped_data
-
-            # Display the scraped data
-            st.header("Scraped Product Data")
-            st.write(scraped_data)
-
-            # Access the description and reviews from your scraped_data dictionary
-            description = scraped_data['description']
-            reviews = "\n".join(scraped_data['reviews'])  # Join multiple reviews into a single string
-
-            # Apply extractive summarization to the description and reviews
-            summarized_description = extractive_summarize(description)
-            summarized_reviews = extractive_summarize(reviews, num_sentences=3)  # Adjust the number of sentences as needed
-
-            st.header("Summarized Description:")
-            st.write(summarized_description)
-
-            st.header("Summarized Reviews:")
-            st.write(summarized_reviews)
-
-            user_input = st.text_input("You:")
-            send_button = st.button("Send")
-
-            if send_button:
-                chatbot(user_input, scraped_data, summarized_description, summarized_reviews)
+                if scraped_data:
+                    st.header("Scraped Product Data")
+                    st.write(scraped_data)
+                    description = scraped_data['description']
+                    reviews = "\n".join(scraped_data['reviews'])  # Join multiple reviews into a single string
+                    summarized_description = extractive_summarize(description)
+                    summarized_reviews = extractive_summarize(reviews, num_sentences=3)  # Adjust the number of sentences as needed
+                    st.header("Summarized Description:")
+                    st.write(summarized_description)
+                    st.header("Summarized Reviews:")
+                    st.write(summarized_reviews)
+                    
+                    chatbot(scraped_data, summarized_description, summarized_reviews)
 
 if __name__ == "__main__":
     main()
