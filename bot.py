@@ -161,84 +161,79 @@ def chatbot(scraped_data, summarized_description, summarized_reviews):
     # Function to initialize the conversation state
     def init_conversation():
         return []
+
     # Function to get the current conversation
     def get_conversation():
         if "conversation" not in st.session_state:
             st.session_state.conversation = init_conversation()
         return st.session_state.conversation
+
     # Initialize conversation
     conversation = get_conversation()
 
-    # User input
-    user_input = st.text_input("You:")
-    
-    # Submit button
-    if user_input and not st.session_state.get('button_clicked'):
-        user_input = user_input.lower()
-        conversation.append(f"You: {user_input}")
-        found_match = False
-        for key, synonyms in chatbot_responses.items():
-            for synonym in synonyms:
-                if synonym in user_input.lower():
-                    if key == 'description':
-                        if 'short' in user_input.lower() or 'brief' in user_input.lower():
-                            description = summarized_description if summarized_description else "No description available."
-                            response = f"Short Description: {description}"
-                        else:
-                            description = scraped_data.get('description', "No description available.")
-                            response = f"Full Description: {description}"
-                    elif key == 'reviews':
-                        if 'summarized' in user_input.lower():
-                            reviews = summarized_reviews if summarized_reviews else "No summarized reviews available."
-                            response = f"Summarized Reviews: {reviews}"
-                        else:
-                            reviews = "\n".join(scraped_data.get('reviews', []))
-                            if reviews:
-                                response = f"Full Reviews:\n{reviews}"
-                            else:
-                                response = "No reviews available."
-                    else:
-                        value = scraped_data.get(key, "Not available.")
-                        response = f"The {key} of the product is: {value}"
-                    found_match = True
-        if not found_match:
-            response = "I'm sorry, I didn't understand your question. Could you please rephrase it?"
-        conversation.append(response)
-        st.session_state.button_clicked = True
+    with st.form(key='chat_form'):
+        # User input
+        user_input = st.text_input("You:")
 
-    # Display conversation history
+        # Submit button
+        submit_button = st.form_submit_button(label='Send')
+
+        if submit_button:
+            user_input = user_input.lower()
+            conversation.append(f"You: {user_input}")
+            found_match = False
+            for key, synonyms in chatbot_responses.items():
+                for synonym in synonyms:
+                    if synonym in user_input.lower():
+                        if key == 'description':
+                            if 'short' in user_input.lower() or 'brief' in user_input.lower():
+                                description = summarized_description if summarized_description else "No description available."
+                                response = f"Short Description: {description}"
+                            else:
+                                description = scraped_data.get('description', "No description available.")
+                                response = f"Full Description: {description}"
+                        elif key == 'reviews':
+                            if 'summarized' in user_input.lower():
+                                reviews = summarized_reviews if summarized_reviews else "No summarized reviews available."
+                                response = f"Summarized Reviews: {reviews}"
+                            else:
+                                reviews = "\n".join(scraped_data.get('reviews', []))
+                                if reviews:
+                                    response = f"Full Reviews:\n{reviews}"
+                                else:
+                                    response = "No reviews available."
+                        else:
+                            value = scraped_data.get(key, "Not available.")
+                            response = f"The {key} of the product is: {value}"
+                        found_match = True
+            if not found_match:
+                response = "I'm sorry, I didn't understand your question. Could you please rephrase it?"
+            conversation.append(response)
+
+  # Display conversation history
     st.text_area("Conversation History", value="\n".join(conversation), key="conversation_history")
 
-# Streamlit app
 def main():
     st.title("SHopy - Your Shopping Assistant")
 
-    # Input for webpage URL
     webpage_url = st.text_input("Enter the URL of the webpage:")
 
     if st.button("Scrape Product Data"):
         scraped_data = scrape_single_url(webpage_url)
 
         if scraped_data:
-            # Display the scraped data
             st.header("Scraped Product Data")
             st.write(scraped_data)
-
-            # Access the description and reviews from your scraped_data dictionary
             description = scraped_data['description']
             reviews = "\n".join(scraped_data['reviews'])  # Join multiple reviews into a single string
-
-            # Apply extractive summarization to the description and reviews
             summarized_description = extractive_summarize(description)
             summarized_reviews = extractive_summarize(reviews, num_sentences=3)  # Adjust the number of sentences as needed
-
             st.header("Summarized Description:")
             st.write(summarized_description)
-
             st.header("Summarized Reviews:")
             st.write(summarized_reviews)
-
             chatbot(scraped_data, summarized_description, summarized_reviews)
 
 if __name__ == "__main__":
     main()
+
