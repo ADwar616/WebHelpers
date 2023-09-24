@@ -238,5 +238,5 @@ def main():
 
             chatbot(scraped_data, summarized_description, summarized_reviews)
 
-if _name_ == "_main_":
+if __name__ == "__main__":
     main()
