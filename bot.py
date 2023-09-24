@@ -158,17 +158,23 @@ def chatbot(scraped_data, summarized_description, summarized_reviews):
         'all_info': ['display all data', 'display all info', 'display all information', 'give all info', 'show everything', 'show all details']
     }
 
-    # Initialize conversation history
-    if "conversation" not in st.session_state:
-        st.session_state.conversation = []
-
+    # Function to initialize the conversation state
+    def init_conversation():
+        return []
+    # Function to get the current conversation
+    def get_conversation():
+        if "conversation" not in st.session_state:
+            st.session_state.conversation = init_conversation()
+        return st.session_state.conversation
+    # Initialize conversation
+    conversation = get_conversation()
     # User input
     user_input = st.text_input("You:")
-
+    
     # Submit button
     if st.button("Send"):
         user_input = user_input.lower()
-        st.session_state.conversation.append(f"You: {user_input}")
+        conversation.append(f"You: {user_input}")
         found_match = False
         for key, synonyms in chatbot_responses.items():
             for synonym in synonyms:
@@ -196,29 +202,22 @@ def chatbot(scraped_data, summarized_description, summarized_reviews):
                     found_match = True
         if not found_match:
             response = "I'm sorry, I didn't understand your question. Could you please rephrase it?"
-        st.session_state.conversation.append(response)
+        conversation.append(response)
 
     # Display conversation history
-    for message in st.session_state.conversation:
-        st.text(message)
+    st.text_area("Conversation History", value="\n".join(conversation), key="conversation_history")
 
+# Streamlit app
 def main():
     st.title("SHopy - Your Shopping Assistant")
 
     # Input for webpage URL
     webpage_url = st.text_input("Enter the URL of the webpage:")
 
-    # Check if the data has already been scraped
-    if "scraped_data" not in st.session_state:
-        st.session_state.scraped_data = None
-
-    if st.button("Scrape Product Data") or st.session_state.scraped_data is None:
+    if st.button("Scrape Product Data"):
         scraped_data = scrape_single_url(webpage_url)
 
         if scraped_data:
-            # Store the scraped data in the session state
-            st.session_state.scraped_data = scraped_data
-
             # Display the scraped data
             st.header("Scraped Product Data")
             st.write(scraped_data)
@@ -239,5 +238,5 @@ def main():
 
             chatbot(scraped_data, summarized_description, summarized_reviews)
 
-if __name__ == "__main__":
+if _name_ == "_main_":
     main()
