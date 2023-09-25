@@ -7,8 +7,6 @@ import time
 import spacy
 from nltk.tokenize import sent_tokenize, word_tokenize
 import nltk
-nltk.download('punkt')
-import spacy
 
 # Function to extract Product title
 def get_title(soup):
@@ -16,9 +14,11 @@ def get_title(soup):
         title = soup.find("span", attrs={"id": 'productTitle'})
         title_value = title.text
         title_string = title_value.strip()
+        if title_string == "Title not available":
+            return None  # If title is not available, return None
+        return title_string
     except Exception:
-        title_string = "Title not available"  # Assign a default value
-    return title_string
+        return None
 
 # Function to extract Product Prices
 def get_price(soup):
@@ -50,20 +50,6 @@ def get_review_count(soup):
         review_count = "Review count not available"  # Assign a default value
     return review_count
 
-# Function to extract the Product description
-def get_product_description(soup):
-    return "Description not available"
-    # try:
-    #     description = soup.find("ul", class_="a-unordered-list a-vertical a-spacing-mini")
-    #     if description:
-    #         description_text = " ".join([item.text.strip() for item in description.find_all("span", class_="a-list-item")])
-    #         if description_text:
-    #             return description_text
-    #         else:
-    #             return "Description not available"
-    # except Exception:
-    #     return "Description not available"  # Assign a default value
-
 # Function to extract Availability Status
 def get_availability(soup):
     try:
@@ -87,156 +73,82 @@ def get_reviews(soup):
     
     return reviews
 
-# Function to scrape a single URL and store data in a dictionary
 def scrape_single_url(url):
-    try:
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-        }
-        
-        # Create a session to manage cookies and maintain state
-        session = requests.Session()
-        time.sleep(2)
-        # Use the session for making requests
-        response = session.get(url, headers=headers)
-
-        if response.status_code == 200:
-            soup = BeautifulSoup(response.text, 'html.parser')
-            data = {
-                'title': get_title(soup),
-                'price': get_price(soup),
-                'rating': get_rating(soup),
-                'reviews': get_reviews(soup),
-                'availability': get_availability(soup),
-                'description': get_product_description(soup)
+    while True:  # Keep trying until a valid title is obtained
+        try:
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
             }
-            return data
-        else:
-            st.error(f"Failed to retrieve the Amazon page: {url}")
-            return None
-    except Exception as e:
-        st.error(f"An error occurred: {e}")
-        return None
 
-# Function for extractive summarization
-def extractive_summarize(text, num_sentences=2):
-    sentences = sent_tokenize(text)
-    word_frequencies = {}
-    
-    for sentence in sentences:
-        words = word_tokenize(sentence)
-        for word in words:
-            if word not in word_frequencies:
-                word_frequencies[word] = 1
-            else:
-                word_frequencies[word] += 1
-    
-    sentence_scores = {}
-    for sentence in sentences:
-        for word in word_tokenize(sentence):
-            if word in word_frequencies:
-                if sentence not in sentence_scores:
-                    sentence_scores[sentence] = word_frequencies[word]
+            # Create a session to manage cookies and maintain state
+            session = requests.Session()
+            time.sleep(2)
+            # Use the session for making requests
+            response = session.get(url, headers=headers)
+
+            if response.status_code == 200:
+                soup = BeautifulSoup(response.text, 'html.parser')
+                title = get_title(soup)
+                if title:
+                    data = {
+                        'title': title,
+                        'price': get_price(soup),
+                        'rating': get_rating(soup),
+                        'reviews': get_reviews(soup),
+                        'availability': get_availability(soup),
+                    }
+                    # Print the title once
+                    print(f"Product Title: {data['title']}")
+                    return data
                 else:
-                    sentence_scores[sentence] += word_frequencies[word]
-    
-    summary_sentences = sorted(sentence_scores, key=sentence_scores.get, reverse=True)[:num_sentences]
-    summary = ' '.join(summary_sentences)
-    
-    return summary
+                    print("Product title is not available. Retrying...")
+            else:
+                print(f"Failed to retrieve the Amazon page: {url}")
+                return None
+        except Exception as e:
+            print(f"An error occurred: {e}")
+            return None
 
-def chatbot(scraped_data, summarized_description, summarized_reviews):
-    st.subheader("Chat with SHopy - Your Shopping Assistant")
+def chat_with_user(scraped_data):
+    print("\nWelcome to WebHelpers")
+    print("You can ask questions about the product. Type 'exit' to end the conversation.")
 
-    chatbot_responses = {
-        'title': ['name', 'title', 'brand', 'product name', 'what is it called'],
-        'price': ['price', 'cost', 'how much', 'value', 'worth', 'expense'],
-        'description': ['short description', 'brief description', 'describe', 'details', 'detail', 'specs', 'specifications', 'features'],
-        'rating': ['rating', 'ratings', 'rated', 'stars', 'feedback', 'reviews'],
-        'reviews_count': ['reviews count', 'no of reviews', 'number of reviews', 'how many reviews'],
-        'availability': ['deliver', 'delivery', 'available', 'availability', 'in stock', 'can I buy it'],
-        'all_info': ['display all data', 'display all info', 'display all information', 'give all info', 'show everything', 'show all details']
-    }
+    while True:
+        user_input = input("\nYou: ").strip().lower()
 
-    # Initialize conversation history
-    if "conversation" not in st.session_state:
-        st.session_state.conversation = []
-
-    # User input
-    user_input = st.text_input("You:")
-
-    if st.button("Send"):
-        user_input = user_input.lower()
-        st.session_state.conversation.append(f"You: {user_input}")
-        found_match = False
-        for key, synonyms in chatbot_responses.items():
-            for synonym in synonyms:
-                if synonym in user_input:
-                    if key == 'description':
-                        if 'short' in user_input or 'brief' in user_input:
-                            description = summarized_description if summarized_description else "No description available."
-                            response = f"Short Description: {description}"
-                        else:
-                            description = scraped_data.get('description', "No description available.")
-                            response = f"Full Description: {description}"
-                    elif key == 'reviews':
-                        if 'summarized' in user_input:
-                            reviews = summarized_reviews if summarized_reviews else "No summarized reviews available."
-                            response = f"Summarized Reviews: {reviews}"
-                        else:
-                            reviews = "\n".join(scraped_data.get('reviews', []))
-                            if reviews:
-                                response = f"Full Reviews:\n{reviews}"
-                            else:
-                                response = "No reviews available."
-                    else:
-                        value = scraped_data.get(key, "Not available.")
-                        response = f"The {key} of the product is: {value}"
+        if user_input == 'exit':
+            print("\nGoodbye!")
+            break
+        elif user_input == 'proceed':
+            print("\nYou can now ask questions about the product.")
+        else:
+            found_match = False
+            for key in scraped_data.keys():
+                if key in user_input:
+                    value = scraped_data.get(key, "Not available.")
+                    print(f"The {key} of the product is: {value}")
                     found_match = True
-        if not found_match:
-            response = "I'm sorry, I didn't understand your question. Could you please rephrase it?"
-        st.session_state.conversation.append(response)
 
-    # Display conversation history
-    st.text_area("Conversation History", value="\n".join(st.session_state.conversation), key="conversation_history")
-
+            if not found_match:
+                print("I'm sorry, I didn't understand your question. Could you please rephrase it?")
+    
+# Streamlit app
 def main():
-    st.title("SHopy - Your Shopping Assistant")
-
-    # Input for webpage URL
-    webpage_url = st.text_input("Enter the URL of the webpage:")
-
-    # Check if the data has already been scraped
-    if "scraped_data" not in st.session_state:
-        st.session_state.scraped_data = None
-
-    if st.button("Scrape Product Data") or st.session_state.scraped_data is None:
+    st.title("WebHelpers Chatbot")
+    st.write("Enter the URL of the product page:")
+    
+    # Get the user's input URL
+    webpage_url = st.text_input("URL")
+    
+    if st.button("Scrape Data"):
+        # Scrape product data
         scraped_data = scrape_single_url(webpage_url)
 
         if scraped_data:
-            # Store the scraped data in the session state
-            st.session_state.scraped_data = scraped_data
-
-            # Display the scraped data
-            st.header("Scraped Product Data")
-            st.write(scraped_data)
-
-            # Access the description and reviews from your scraped_data dictionary
-            description = scraped_data['description']
-            reviews = "\n".join(scraped_data['reviews'])  # Join multiple reviews into a single string
-
-            # Apply extractive summarization to the description and reviews
-            summarized_description = extractive_summarize(description)
-            summarized_reviews = extractive_summarize(reviews, num_sentences=3)  # Adjust the number of sentences as needed
-
-            st.header("Summarized Description:")
-            st.write(summarized_description)
-
-            st.header("Summarized Reviews:")
-            st.write(summarized_reviews)
-
-            chatbot(scraped_data, summarized_description, summarized_reviews)
+            st.success("Data successfully scraped!")
+            
+            if st.button("Start Chat"):
+                chat_with_user(scraped_data)
 
 if __name__ == "__main__":
     main()
-
