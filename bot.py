@@ -74,13 +74,9 @@ def main():
                 for i, element in enumerate(review_elements[:10]):  # Extract the first 10 reviews
                     review_text = element.find("span", class_="a-size-base review-text").text.strip()
                     review_lines = review_text.split('\n')
-                    for line in review_lines:
-                        if line.strip():
-                            reviews.append(f"{i + 1}. {line.strip()}")
+                    review_lines = [line.strip() for line in review_lines if line.strip()]
+                    reviews.append(f"{i + 1}. {' '.join(review_lines)}")
 
-                if not reviews:
-                    reviews = ["No reviews available"]  # Assign a default value if no reviews are found
-    
                 if not reviews:
                     reviews = ["No reviews available"]  # Assign a default value if no reviews are found
 
