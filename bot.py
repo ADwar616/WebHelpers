@@ -147,8 +147,12 @@ def main():
         if scraped_data:
             st.success("Data successfully scraped!")
             
+            # Store scraped_data in session state
+            st.session_state.scraped_data = scraped_data
+
             if st.button("Start Chat"):
-                chat_with_user(scraped_data)
+                # Retrieve scraped_data from session state
+                chat_with_user(st.session_state.scraped_data)
 
 if __name__ == "__main__":
     main()
