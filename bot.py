@@ -67,17 +67,31 @@ def main():
                 except Exception:
                     available = "Availability not available"
 
+                # Get reviews
+                reviews = []
+                review_elements = soup.find_all("div", class_="a-row a-spacing-small review-data")
+    
+                for element in review_elements[:10]:  # Extract the first 10 reviews
+                    review_text = element.find("span", class_="a-size-base review-text").text.strip()
+                    reviews.append(review_text)
+    
+                if not reviews:
+                    reviews = ["No reviews available"]  # Assign a default value if no reviews are found
+
                 if title_string:
                     scraped_data = {
                         'title': title_string,
                         'price': price,
                         'rating': rating,
                         'availability': available,
+                        'reviews': reviews,
                     }
                     
                     st.success("Data successfully scraped!")
+                    
+                    # Display only the title of the product under the "Scraped Product Data" section
                     st.header("Scraped Product Data")
-                    st.write(scraped_data)
+                    st.write(f"Title: {title_string}")
                     
                     found_match = False
 
