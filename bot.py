@@ -71,9 +71,9 @@ def main():
                 reviews = []
                 review_elements = soup.find_all("div", class_="a-row a-spacing-small review-data")
     
-                for element in review_elements[:10]:  # Extract the first 10 reviews
+                for i, element in enumerate(review_elements[:10]):  # Extract the first 10 reviews
                     review_text = element.find("span", class_="a-size-base review-text").text.strip()
-                    reviews.append(review_text)
+                    reviews.append(f"{i+1}. {review_text}")
     
                 if not reviews:
                     reviews = ["No reviews available"]  # Assign a default value if no reviews are found
@@ -115,6 +115,7 @@ def main():
         st.session_state.user_input=""
         
     st.text_area("Chat History", value="\n".join(st.session_state.chat_history), height=200)
+
             
 if __name__ == "__main__":
     main()
