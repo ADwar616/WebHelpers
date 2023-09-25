@@ -3,49 +3,22 @@ import requests
 from bs4 import BeautifulSoup
 import time
 
-try:
-    import SessionState
-except ModuleNotFoundError:
-    # Create a new module named SessionState
-    code = '''import streamlit.ReportThread as ReportThread
-from streamlit.server.Server import Server
-
-class SessionState(object):
-    def __init__(self, **kwargs):
-        for key, val in kwargs.items():
-            setattr(self, key, val)
-
-def get(**kwargs):
-    ctx = ReportThread.get_report_ctx()
-    session = None
-    session_id = ctx.session_id
-    session_info = Server.get_current()._get_session_info(session_id)
-    if session_info is None:
-        raise RuntimeError("Couldn't get your Streamlit Session object.")
-    this_session = session_info.session
-
-    if not hasattr(this_session, "_custom_session_state"):
-        this_session._custom_session_state = SessionState(**kwargs)
-    return this_session._custom_session_state'''
-
-    with open('SessionState.py', 'w') as file:
-        file.write(code)
-
-import SessionState
-
 def main():
     st.title("WebHelpers Chatbot")
     st.write("Enter the URL of the product page:")
     
     webpage_url = st.text_input("URL")
     
-    state = SessionState.get(chat_history=[], user_input="")
+    if 'chat_history' not in st.session_state:
+        st.session_state.chat_history = []
+    if 'user_input' not in st.session_state:
+        st.session_state.user_input = ""
     
-    user_input = st.text_area("You:", value=state.user_input)
+    user_input = st.text_area("You:", value=st.session_state.user_input)
     
     if st.button("Send"):
-        state.user_input = user_input.lower()
-        state.chat_history.append(f"You: {state.user_input}")
+        st.session_state.user_input = user_input.lower()
+        st.session_state.chat_history.append(f"You: {st.session_state.user_input}")
         
         # Scrape product data
         try:
@@ -109,14 +82,14 @@ def main():
                     found_match = False
 
                     for key in scraped_data.keys():
-                        if key in state.user_input:
+                        if key in st.session_state.user_input:
                             value = scraped_data.get(key, "Not available.")
                             response = f"The {key} of the product is: {value}"
-                            state.chat_history.append(response)
+                            st.session_state.chat_history.append(response)
                             found_match = True
 
                     if not found_match:
-                        state.chat_history.append("I'm sorry, I didn't understand your question. Could you please rephrase it?")
+                        st.session_state.chat_history.append("I'm sorry, I didn't understand your question. Could you please rephrase it?")
                         
                 else:
                     st.error("Product title is not available.")
@@ -125,9 +98,9 @@ def main():
         except Exception as e:
             st.error(f"An error occurred: {e}")
             
-        state.user_input=""
+        st.session_state.user_input=""
         
-    st.text_area("Chat History", value="\n".join(state.chat_history), height=200)
+    st.text_area("Chat History", value="\n".join(st.session_state.chat_history), height=200)
             
 if __name__ == "__main__":
     main()
