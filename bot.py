@@ -1,8 +1,3 @@
-import streamlit as st
-import requests
-from bs4 import BeautifulSoup
-import time
-
 def main():
     st.title("WebHelpers Chatbot")
     st.write("Enter the URL of the product page:")
@@ -74,9 +69,13 @@ def main():
                 for i, element in enumerate(review_elements[:10]):  # Extract the first 10 reviews
                     review_text = element.find("span", class_="a-size-base review-text").text.strip()
                     review_lines = review_text.split('\n')
-                    review_lines = [line.strip() for line in review_lines if line.strip()]
-                    reviews.append(f"{i + 1}. {' '.join(review_lines)}")
+                    for line in review_lines:
+                        if line.strip():
+                            reviews.append(f"{i + 1}. {line.strip()}")
 
+                if not reviews:
+                    reviews = ["No reviews available"]  # Assign a default value if no reviews are found
+    
                 if not reviews:
                     reviews = ["No reviews available"]  # Assign a default value if no reviews are found
 
@@ -86,7 +85,7 @@ def main():
                         'price': price,
                         'rating': rating,
                         'availability': available,
-                        'reviews': st.write('\n'.join(reviews)),
+                        'reviews': reviews,
                     }
                     
                     st.success("Data successfully scraped!")
@@ -117,8 +116,3 @@ def main():
         st.session_state.user_input=""
         
     st.text_area("Chat History", value="\n".join(st.session_state.chat_history), height=200)
-
-
-            
-if __name__ == "__main__":
-    main()
