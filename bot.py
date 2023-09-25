@@ -3,13 +3,51 @@ import requests
 from bs4 import BeautifulSoup
 import time
 
+try:
+    import SessionState
+except ModuleNotFoundError:
+    # Create a new module named SessionState
+    code = '''import streamlit.ReportThread as ReportThread
+from streamlit.server.Server import Server
+
+class SessionState(object):
+    def __init__(self, **kwargs):
+        for key, val in kwargs.items():
+            setattr(self, key, val)
+
+def get(**kwargs):
+    ctx = ReportThread.get_report_ctx()
+    session = None
+    session_id = ctx.session_id
+    session_info = Server.get_current()._get_session_info(session_id)
+    if session_info is None:
+        raise RuntimeError("Couldn't get your Streamlit Session object.")
+    this_session = session_info.session
+
+    if not hasattr(this_session, "_custom_session_state"):
+        this_session._custom_session_state = SessionState(**kwargs)
+    return this_session._custom_session_state'''
+
+    with open('SessionState.py', 'w') as file:
+        file.write(code)
+
+import SessionState
+
 def main():
     st.title("WebHelpers Chatbot")
     st.write("Enter the URL of the product page:")
     
     webpage_url = st.text_input("URL")
     
-    if st.button("Scrape Data"):
+    state = SessionState.get(chat_history=[], user_input="")
+    
+    user_input = st.text_area("You:", value=state.user_input)
+    
+    if st.button("Send"):
+        state.user_input = user_input.lower()
+        state.chat_history.append(f"You: {state.user_input}")
+        
+        # Scrape product data
         try:
             headers = {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
@@ -68,26 +106,17 @@ def main():
                     st.header("Scraped Product Data")
                     st.write(scraped_data)
                     
-                    st.subheader("Chat with WebHelpers - Your Shopping Assistant")
-                    user_input = st.text_area("You:")
-                    chat_history = []
+                    found_match = False
 
-                    if st.button("Send"):
-                        user_input = user_input.lower()
-                        chat_history.append(f"You: {user_input}")
-                        found_match = False
+                    for key in scraped_data.keys():
+                        if key in state.user_input:
+                            value = scraped_data.get(key, "Not available.")
+                            response = f"The {key} of the product is: {value}"
+                            state.chat_history.append(response)
+                            found_match = True
 
-                        for key in scraped_data.keys():
-                            if key in user_input:
-                                value = scraped_data.get(key, "Not available.")
-                                response = f"The {key} of the product is: {value}"
-                                chat_history.append(response)
-                                found_match = True
-
-                        if not found_match:
-                            chat_history.append("I'm sorry, I didn't understand your question. Could you please rephrase it?")
-
-                        st.text_area("Chat History", value="\n".join(chat_history), height=200)
+                    if not found_match:
+                        state.chat_history.append("I'm sorry, I didn't understand your question. Could you please rephrase it?")
                         
                 else:
                     st.error("Product title is not available.")
@@ -95,6 +124,10 @@ def main():
                 st.error(f"Failed to retrieve the Amazon page: {webpage_url}")
         except Exception as e:
             st.error(f"An error occurred: {e}")
+            
+        state.user_input=""
+        
+    st.text_area("Chat History", value="\n".join(state.chat_history), height=200)
             
 if __name__ == "__main__":
     main()
