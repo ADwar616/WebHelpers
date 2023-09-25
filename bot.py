@@ -1,3 +1,8 @@
+import streamlit as st
+import requests
+from bs4 import BeautifulSoup
+import time
+
 def main():
     st.title("WebHelpers Chatbot")
     st.write("Enter the URL of the product page:")
@@ -116,3 +121,6 @@ def main():
         st.session_state.user_input=""
         
     st.text_area("Chat History", value="\n".join(st.session_state.chat_history), height=200)
+
+if __name__ == "__main__":
+    main()
