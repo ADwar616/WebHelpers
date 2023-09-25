@@ -1,12 +1,7 @@
 import streamlit as st
 import requests
 from bs4 import BeautifulSoup
-import pandas as pd
-import numpy as np
 import time
-import spacy
-from nltk.tokenize import sent_tokenize, word_tokenize
-import nltk
 
 # Function to extract Product title
 def get_title(soup):
@@ -42,14 +37,6 @@ def get_rating(soup):
             rating = "Rating not available"  # Assign a default value
     return rating
 
-# Function to extract the number of reviews
-def get_review_count(soup):
-    try:
-        review_count = soup.find("span", attrs={'id': 'acrCustomerReviewText'}).string.split()
-    except Exception:
-        review_count = "Review count not available"  # Assign a default value
-    return review_count
-
 # Function to extract Availability Status
 def get_availability(soup):
     try:
@@ -59,79 +46,40 @@ def get_availability(soup):
         available = "Availability not available"  # Assign a default value
     return available
 
-# Function to extract product reviews
-def get_reviews(soup):
-    reviews = []
-    review_elements = soup.find_all("div", class_="a-row a-spacing-small review-data")
-    
-    for element in review_elements[:10]:  # Extract the first 10 reviews
-        review_text = element.find("span", class_="a-size-base review-text").text.strip()
-        reviews.append(review_text)
-    
-    if not reviews:
-        reviews = ["No reviews available"]  # Assign a default value if no reviews are found
-    
-    return reviews
-
+# Function to scrape product data
 def scrape_single_url(url):
-    while True:  # Keep trying until a valid title is obtained
-        try:
-            headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-            }
+    try:
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+        }
 
-            # Create a session to manage cookies and maintain state
-            session = requests.Session()
-            time.sleep(2)
-            # Use the session for making requests
-            response = session.get(url, headers=headers)
+        # Create a session to manage cookies and maintain state
+        session = requests.Session()
+        time.sleep(2)
+        # Use the session for making requests
+        response = session.get(url, headers=headers)
 
-            if response.status_code == 200:
-                soup = BeautifulSoup(response.text, 'html.parser')
-                title = get_title(soup)
-                if title:
-                    data = {
-                        'title': title,
-                        'price': get_price(soup),
-                        'rating': get_rating(soup),
-                        'reviews': get_reviews(soup),
-                        'availability': get_availability(soup),
-                    }
-                    # Print the title once
-                    print(f"Product Title: {data['title']}")
-                    return data
-                else:
-                    print("Product title is not available. Retrying...")
+        if response.status_code == 200:
+            soup = BeautifulSoup(response.text, 'html.parser')
+            title = get_title(soup)
+            if title:
+                data = {
+                    'title': title,
+                    'price': get_price(soup),
+                    'rating': get_rating(soup),
+                    'availability': get_availability(soup),
+                }
+                return data
             else:
-                print(f"Failed to retrieve the Amazon page: {url}")
+                st.error("Product title is not available.")
                 return None
-        except Exception as e:
-            print(f"An error occurred: {e}")
-            return None
-
-def chat_with_user(scraped_data):
-    print("\nWelcome to WebHelpers")
-    print("You can ask questions about the product. Type 'exit' to end the conversation.")
-
-    while True:
-        user_input = input("\nYou: ").strip().lower()
-
-        if user_input == 'exit':
-            print("\nGoodbye!")
-            break
-        elif user_input == 'proceed':
-            print("\nYou can now ask questions about the product.")
         else:
-            found_match = False
-            for key in scraped_data.keys():
-                if key in user_input:
-                    value = scraped_data.get(key, "Not available.")
-                    print(f"The {key} of the product is: {value}")
-                    found_match = True
+            st.error(f"Failed to retrieve the Amazon page: {url}")
+            return None
+    except Exception as e:
+        st.error(f"An error occurred: {e}")
+        return None
 
-            if not found_match:
-                print("I'm sorry, I didn't understand your question. Could you please rephrase it?")
-    
 # Streamlit app
 def main():
     st.title("WebHelpers Chatbot")
@@ -146,13 +94,31 @@ def main():
 
         if scraped_data:
             st.success("Data successfully scraped!")
-            
-            # Store scraped_data in session state
-            st.session_state.scraped_data = scraped_data
 
-            if st.button("Start Chat"):
-                # Retrieve scraped_data from session state
-                chat_with_user(st.session_state.scraped_data)
+            st.header("Scraped Product Data")
+            st.write(scraped_data)
+            
+            st.subheader("Chat with WebHelpers - Your Shopping Assistant")
+
+            user_input = st.text_area("You:")
+            chat_history = []
+
+            if st.button("Send"):
+                user_input = user_input.lower()
+                chat_history.append(f"You: {user_input}")
+                found_match = False
+
+                for key in scraped_data.keys():
+                    if key in user_input:
+                        value = scraped_data.get(key, "Not available.")
+                        response = f"The {key} of the product is: {value}"
+                        chat_history.append(response)
+                        found_match = True
+
+                if not found_match:
+                    chat_history.append("I'm sorry, I didn't understand your question. Could you please rephrase it?")
+
+            st.text_area("Chat History", value="\n".join(chat_history), height=200)
 
 if __name__ == "__main__":
     main()
