@@ -86,7 +86,7 @@ def main():
                         'price': price,
                         'rating': rating,
                         'availability': available,
-                        'reviews': reviews,
+                        'reviews': st.write('\n'.join(reviews)),
                     }
                     
                     st.success("Data successfully scraped!")
